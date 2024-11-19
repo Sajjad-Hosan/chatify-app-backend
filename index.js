@@ -3,25 +3,35 @@ const cors = require("cors");
 // const cookieParser = require("cookie-parser");
 require("dotenv").config();
 const { Server } = require("socket.io");
-const { dirname } = require("path");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const app = express();
 
 const port = process.env.PORT || 4000;
-const uri = "mongodb://localhost:27017";
+// const uri = "mongodb://localhost:27017";
+const uri = `mongodb+srv://${process.env.DB_ADDRE}:${process.env.DB_PASS}@cluster0.aeratuu.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+
 const http = require("http").createServer(app);
 const io = new Server(http, {
   cors: {
-    origin: "http://localhost:3000", // Allow the React app to connect
+    origin: [
+      "http://localhost:3000", // Allow React app in development
+      "https://ch4tify.web.app", // Allow web app deployed on Firebase
+      "https://ch4tify.firebaseapp.com", // Allow web app deployed on Firebase
+    ], 
     methods: ["GET", "POST"],
+    credentials: true, // Ensure credentials are sent
   },
 });
 
 app.use(
   cors({
-    origin: ["http://localhost:3000"],
-    credentials: true,
+    origin: [
+      "http://localhost:3000", // Allow React app in development
+      "https://ch4tify.web.app", // Allow web app deployed on Firebase
+      "https://ch4tify.firebaseapp.com", // Allow web app deployed on Firebase
+    ],
+    credentials: true, // Ensure credentials are sent
   })
 );
 app.use(express.json());
@@ -98,7 +108,6 @@ const run = async () => {
           $push: { friends: { ...person1 } },
         }
       );
-      console.log(data);
       res.send({ personUpdate1, personUpdate2 });
     });
     app.delete("/delete-request/:id", async (req, res) => {
