@@ -16,9 +16,10 @@ const io = new Server(http, {
   cors: {
     origin: [
       "http://localhost:3000", // Allow React app in development
+      "https://chatify-app-z24j.onrender.com",
       "https://ch4tify.web.app", // Allow web app deployed on Firebase
       "https://ch4tify.firebaseapp.com", // Allow web app deployed on Firebase
-    ], 
+    ],
     methods: ["GET", "POST"],
     credentials: true, // Ensure credentials are sent
   },
@@ -28,6 +29,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:3000", // Allow React app in development
+      "https://chatify-app-z24j.onrender.com",
       "https://ch4tify.web.app", // Allow web app deployed on Firebase
       "https://ch4tify.firebaseapp.com", // Allow web app deployed on Firebase
     ],
