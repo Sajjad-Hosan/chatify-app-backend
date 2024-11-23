@@ -4,7 +4,6 @@ const cors = require("cors");
 require("dotenv").config();
 const { Server } = require("socket.io");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-const { data } = require("autoprefixer");
 
 const app = express();
 
@@ -86,7 +85,6 @@ const run = async () => {
       const result = await requestCollection.insertOne(data);
     });
     app.post("/accept-request", async (req, res) => {
-     
       const data = req.body;
       const added = await friendCollection.insertOne(data);
       const person1 = await userCollection.findOne({
@@ -199,7 +197,7 @@ const run = async () => {
     });
     app.post("/group-conversation", async (req, res) => {
       const body = req.body;
-   
+
       const result = await msgCollection.insertOne(body);
       res.send(result);
     });
@@ -218,7 +216,7 @@ const run = async () => {
     });
     app.post("/group-request-accept", async (req, res) => {
       const body = req.body;
-    
+
       const filterGroup = await groupCollection.updateOne(
         {
           _id: new ObjectId(body.group_id),
@@ -292,10 +290,8 @@ const run = async () => {
 
     socket.on("joinRoom", (room) => {
       socket.join(room);
-    
     });
     socket.on("groupMessage", ({ room, msgData }) => {
-    
       io.to(room).emit("getGroupMessage", msgData);
     });
 
