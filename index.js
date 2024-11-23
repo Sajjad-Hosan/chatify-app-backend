@@ -4,6 +4,7 @@ const cors = require("cors");
 require("dotenv").config();
 const { Server } = require("socket.io");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const { data } = require("autoprefixer");
 
 const app = express();
 
@@ -46,6 +47,7 @@ const client = new MongoClient(uri, {
   },
 });
 let users = [];
+let groups = [];
 
 const run = async () => {
   try {
@@ -84,7 +86,7 @@ const run = async () => {
       const result = await requestCollection.insertOne(data);
     });
     app.post("/accept-request", async (req, res) => {
-      console.log("send request", req.data);
+     
       const data = req.body;
       const added = await friendCollection.insertOne(data);
       const person1 = await userCollection.findOne({
@@ -138,6 +140,26 @@ const run = async () => {
         return res.send({ message: "group already exist" });
       }
       const result = await groupCollection.insertOne(data);
+      if (result) {
+        const group = await groupCollection.findOne({
+          _id: new ObjectId(result?.insertedId),
+        });
+        const updateResult = await userCollection.updateOne(
+          {
+            _id: new ObjectId(group?.group_admin[0]?.member_id),
+          },
+          {
+            $push: {
+              join_groups: {
+                group_id: group._id,
+                group_name: group.group_name,
+                group_image: group.group_image,
+              },
+            },
+          }
+        );
+      }
+      //
       res.send(result);
     });
     //
@@ -152,7 +174,7 @@ const run = async () => {
         })
         .toArray();
       const nxtPersonData = await userCollection.findOne({
-        _id: new ObjectId(data.to),
+        _id: new ObjectId(data?.to),
       });
       res.send({ result: filter, chatUser: nxtPersonData });
     });
@@ -160,6 +182,90 @@ const run = async () => {
       const body = req.body;
       const result = await msgCollection.insertOne(body);
       res.send(result);
+    });
+    // group conversition
+    app.get("/group-info/:id", async (req, res) => {
+      const result = await groupCollection.findOne({
+        _id: new ObjectId(req.params.id),
+      });
+      res.send(result);
+    });
+    app.post("/group-converstions", async (req, res) => {
+      const body = req.body;
+      const result = await msgCollection
+        .find({ group_name: body?.group_name })
+        .toArray();
+      res.send(result);
+    });
+    app.post("/group-conversation", async (req, res) => {
+      const body = req.body;
+   
+      const result = await msgCollection.insertOne(body);
+      res.send(result);
+    });
+    // group request
+    app.post("/group-request", async (req, res) => {
+      const data = req.body;
+      const exist = await requestCollection.findOne({
+        user_id: data.user_id,
+        group_name: data.group_name, // Check for matching group_name
+      });
+      if (exist) {
+        return res.send({ message: "group already exist!" });
+      }
+      const result = await requestCollection.insertOne(data);
+      res.send(result);
+    });
+    app.post("/group-request-accept", async (req, res) => {
+      const body = req.body;
+    
+      const filterGroup = await groupCollection.updateOne(
+        {
+          _id: new ObjectId(body.group_id),
+        },
+        {
+          $push: {
+            group_members: {
+              member_id: body.user_id,
+              name: body.name,
+              email: body.email,
+              photoURL: body.photoURL,
+              admin: false,
+              block: false,
+              mute: false,
+            },
+          },
+        }
+      );
+      const filterUser = await userCollection.updateOne(
+        {
+          _id: new ObjectId(body.user_id),
+        },
+        {
+          $push: {
+            join_groups: {
+              group_id: body.group_id,
+              group_name: body.group_name,
+              group_image: body.group_image,
+            },
+          },
+        }
+      );
+      const deleteRequest = await requestCollection.deleteOne({
+        _id: new ObjectId(body.request_id),
+      });
+      res.send({ filterGroup, deleteRequest });
+    });
+    app.get("/group-requests/:id", async (req, res) => {
+      const result = await requestCollection
+        .find({
+          user_id: req.params?.id,
+        })
+        .toArray();
+      if (result) {
+        return res.send(result);
+      }
+      return res.send({ message: "no request send!" });
     });
   } finally {
     // console.log()
@@ -182,6 +288,15 @@ const run = async () => {
           .to(sender?.socketId)
           .emit("getMessage", msgData);
       }
+    });
+
+    socket.on("joinRoom", (room) => {
+      socket.join(room);
+    
+    });
+    socket.on("groupMessage", ({ room, msgData }) => {
+    
+      io.to(room).emit("getGroupMessage", msgData);
     });
 
     socket.on("disconnect", () => {
