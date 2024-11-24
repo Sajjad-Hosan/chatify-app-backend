@@ -46,8 +46,6 @@ const client = new MongoClient(uri, {
   },
 });
 let users = [];
-let groups = [];
-
 const run = async () => {
   try {
     const userCollection = client.db("chatify").collection("users");
@@ -67,7 +65,10 @@ const run = async () => {
     });
     app.post("/user", async (req, res) => {
       const user = req.body;
-      const exist = await userCollection.findOne({ email: user.email });
+      const exist = await userCollection.findOne({
+        email: user.email,
+        name: user.name,
+      });
       if (exist) {
         return res.send({ message: "user already exist" });
       }
@@ -75,6 +76,7 @@ const run = async () => {
       res.send(result);
     });
     app.get("/requester/:id", async (req, res) => {
+      console.log(req.params.id);
       const filter = await requestCollection
         .find({ to: req.params.id })
         .toArray();
@@ -82,7 +84,14 @@ const run = async () => {
     });
     app.post("/send-request", async (req, res) => {
       const data = req.body;
+      console.log(data);
+      const exist = await requestCollection.findOne({
+        from: data?.from,
+        to: data?.to,
+      });
+      if (exist) return res.send({ message: "request already exist" });
       const result = await requestCollection.insertOne(data);
+      res.send(result);
     });
     app.post("/accept-request", async (req, res) => {
       const data = req.body;
@@ -118,7 +127,7 @@ const run = async () => {
       });
       res.send(filter);
     });
-    // goup related apis
+    // group related apis
     app.get("/groups", async (req, res) => {
       const result = await groupCollection.find().toArray();
       res.send(result);
@@ -197,7 +206,6 @@ const run = async () => {
     });
     app.post("/group-conversation", async (req, res) => {
       const body = req.body;
-
       const result = await msgCollection.insertOne(body);
       res.send(result);
     });
@@ -260,10 +268,7 @@ const run = async () => {
           user_id: req.params?.id,
         })
         .toArray();
-      if (result) {
-        return res.send(result);
-      }
-      return res.send({ message: "no request send!" });
+      return res.send(result);
     });
   } finally {
     // console.log()
